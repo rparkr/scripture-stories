@@ -1,5 +1,5 @@
 {
-	"name": "scripture-stories-worker",
+	"name": "scripture-stories",
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
