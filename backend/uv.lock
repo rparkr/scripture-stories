@@ -445,18 +445,18 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "beautifulsoup4", specifier = ">=4.14.3" },
-    { name = "fastapi", specifier = ">=0.135.1" },
-    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "beautifulsoup4" },
+    { name = "fastapi" },
+    { name = "httpx" },
     { name = "uvicorn", marker = "extra == 'local'", specifier = ">=0.41.0" },
 ]
 provides-extras = ["local"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "ruff", specifier = ">=0.15.4" },
-    { name = "workers-py", specifier = ">=1.7.3" },
-    { name = "workers-runtime-sdk", specifier = ">=0.3.1" },
+    { name = "ruff" },
+    { name = "workers-py" },
+    { name = "workers-runtime-sdk" },
 ]
 
 [[package]]

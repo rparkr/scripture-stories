@@ -13,7 +13,6 @@ from enum import StrEnum
 
 import asgi
 import httpx
-import uvicorn
 from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -259,6 +258,8 @@ async def get_story_content(url: str):
 
 
 def main():
+    import uvicorn
+
     app.mount("/", StaticFiles(directory="../docs"), name="static")
     local_ip = LocalIP()
     print(
