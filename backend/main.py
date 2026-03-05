@@ -9,26 +9,45 @@
 
 import re
 import socket
+from enum import StrEnum
 
+import asgi
 import httpx
 import uvicorn
 from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-
-app = FastAPI()
+from workers import WorkerEntrypoint
 
 BASE_URL = "https://www.churchofjesuschrist.org"
+USER_AGENT = "ScriptureStories/0.1.0 (https://github.com/rparkr/scripture-stories)"
+
+
+class Volume(StrEnum):
+    OLD_TESTAMENT = "old-testament"
+    NEW_TESTAMENT = "new-testament"
+    BOOK_OF_MORMON = "book-of-mormon"
+    DOCTRINE_AND_COVENANTS = "doctrine-and-covenants"
+
 
 # Mapping of volumes to their URL paths
 VOLUMES = {
-    "old-testament": "/study/manual/old-testament-stories-2022",
-    "new-testament": "/study/manual/new-testament-stories-2026",
-    "book-of-mormon": "/study/manual/book-of-mormon-stories-2024",
-    "doctrine-and-covenants": "/study/manual/doctrine-and-covenants-stories-2025",
+    Volume.OLD_TESTAMENT: "/study/manual/old-testament-stories-2022",
+    Volume.NEW_TESTAMENT: "/study/manual/new-testament-stories-2026",
+    Volume.BOOK_OF_MORMON: "/study/manual/book-of-mormon-stories-2024",
+    Volume.DOCTRINE_AND_COVENANTS: "/study/manual/doctrine-and-covenants-stories-2025",
 }
+
+
+app = FastAPI()
+
+
+class Default(WorkerEntrypoint):
+    """Cloudflare Worker entrypoint that delegates to FastAPI app."""
+
+    async def fetch(self, request):
+        return await asgi.fetch(app, request, self.env)
 
 
 class LocalIP:
@@ -63,17 +82,13 @@ class LocalIP:
         return self._ip
 
 
-# Singleton instance created at module load time
-LOCAL_IP = LocalIP()
-
-
 # Configure CORS for GitHub Pages and local development
 allowed_origins = [
     "http://localhost:3000",  # Local frontend development
     "http://localhost:8000",  # Local testing
     "http://127.0.0.1:3000",
     "http://127.0.0.1:8000",
-    str(LOCAL_IP),
+    str(LocalIP()),
     "https://rparkr.github.io",  # GitHub Pages domain
     "https://rparkr.github.io/scripture-stories",  # GitHub Pages repo
 ]
@@ -90,22 +105,38 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+async def serve_index():
+    # For local development, you can serve the static frontend directly from
+    # FastAPI. In production (Cloudflare Workers), the frontend is served
+    # separately through GitHub Pages, so we just return a message here.
+    # return FileResponse("../docs/index.html")
+    return {"message": "Access '/docs' for API documentation."}
+
+
 async def fetch_page(url: str):
     async with httpx.AsyncClient(follow_redirects=True) as client:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
+        headers = {"User-Agent": USER_AGENT}
         response = await client.get(url, headers=headers)
         if response.status_code != 200:
             raise HTTPException(status_code=404, detail="Page not found")
         return response.text
 
 
-@app.get("/api/stories")
-async def get_stories(volume: str = "new-testament"):
-    if volume not in VOLUMES:
-        raise HTTPException(status_code=400, detail="Invalid volume selected")
+@app.get(
+    "/api/stories",
+)
+async def get_stories(volume: Volume = Volume.NEW_TESTAMENT):
+    """
+    Get list of scripture stories for a given volume of scripture. Defaults to
+    New Testament.
 
+    Options:
+    - old-testament
+    - new-testament
+    - book-of-mormon
+    - doctrine-and-covenants
+    """
     toc_path = VOLUMES[volume]
     html = await fetch_page(BASE_URL + toc_path + "?lang=eng")
     soup = BeautifulSoup(html, "html.parser")
@@ -136,8 +167,16 @@ async def get_stories(volume: str = "new-testament"):
     return stories
 
 
-@app.get("/api/content")
+@app.get(
+    "/api/content",
+)
 async def get_story_content(url: str):
+    """
+    Get content (images, captions, scripture links) for a given scripture story
+    URL.
+
+    The URL can be obtained from the /api/stories endpoint.
+    """
     html = await fetch_page(url)
     soup = BeautifulSoup(html, "html.parser")
     slides = []
@@ -219,15 +258,11 @@ async def get_story_content(url: str):
     return {"slides": slides, "source_url": url}
 
 
-@app.get("/")
-async def serve_index():
-    return FileResponse("../docs/index.html")
-
-
 def main():
     app.mount("/", StaticFiles(directory="../docs"), name="static")
+    local_ip = LocalIP()
     print(
-        f"\n📖 Scripture Stories app is now running\n👉 Go to: http://{LOCAL_IP}:8000\n"
+        f"\n📖 Scripture Stories app is now running\n👉 Go to: http://{local_ip}:8000\n"
     )
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
