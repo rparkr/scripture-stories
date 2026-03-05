@@ -11,4 +11,8 @@ dependencies = ["beautifulsoup4", "fastapi", "httpx"]
 # local = ["uvicorn>=0.41.0"]
 
 [dependency-groups]
-dev = ["ruff", "workers-py", "workers-runtime-sdk"]
+dev = [
+    # "ruff",
+    # "workers-py",
+    "workers-runtime-sdk",
+]
