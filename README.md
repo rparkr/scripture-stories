@@ -1,6 +1,8 @@
 # Scripture Stories
 Read [scripture stories](https://www.churchofjesuschrist.org/study/scriptures/scripture-stories?lang=eng) from [The Church of Jesus Christ of Latter-day Saints](https://www.churchofjesuschrist.org/) through an engaging slideshow experience.
 
+> Try it out! Visit: https://rparkr.github.io/scripture-stories/
+
 ## Screenshots
 **Desktop view of main page**  
 ![Desktop view showing main page](docs/images/desktop_view.webp)
