@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Read Scripture Stories as engaging slideshows"
 readme = "README.md"
 authors = [{ name = "Ryan Parker", email = "ryanparker.ml@gmail.com" }]
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = ["beautifulsoup4>=4.14.3", "fastapi>=0.135.1", "httpx>=0.28.1"]
 
 [project.optional-dependencies]
