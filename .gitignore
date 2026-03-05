@@ -1,0 +1,11 @@
+# Virtual environment
+.venv
+
+# Environment variables
+.env
+
+# Python cached files
+**/__pycache__/
+
+# Ruff linting and formatting
+**/.ruff_cache/

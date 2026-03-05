@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Scripture Stories</title>
+    <!-- Favicon using SVG Scripture Logo -->
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2384b1fa'><path d='M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'/></svg>">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [v-cloak] {
+            display: none;
+        }
+
+        html,
+        body {
+            height: 100%;
+            height: 100dvh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: black;
+        }
+
+        #app {
+            height: 100%;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .intro-gradient {
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 10px;
+        }
+
+        .no-select {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .fade-enter-active,
+        .fade-leave-active {
+            transition: opacity 0.3s ease;
+        }
+
+        .fade-enter-from,
+        .fade-leave-to {
+            opacity: 0;
+        }
+
+        @keyframes loading {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+    </style>
+</head>
+
+<body class="text-white no-select">
+    <div id="app" v-cloak @wheel="handleWheel">
+
+        <!-- Header Overlay -->
+        <header
+            class="absolute top-0 left-0 right-0 p-4 pt-[calc(1rem+env(safe-area-inset-top))] flex justify-between items-center z-[70] pointer-events-none">
+            <button @click="showMenu = !showMenu"
+                class="pointer-events-auto p-3 bg-zinc-900/90 rounded-2xl border border-white/10 backdrop-blur-xl active:scale-95 transition-all shadow-2xl">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16">
+                    </path>
+                </svg>
+            </button>
+
+            <div v-if="currentStoryTitle"
+                class="text-[11px] uppercase tracking-[0.25em] text-zinc-400 font-black text-center max-w-[50%] drop-shadow-lg">
+                {{ currentStoryTitle }}
+            </div>
+
+            <div class="flex gap-2 pointer-events-auto">
+                <button @click="showSettings = true"
+                    class="p-3 bg-zinc-900/90 rounded-2xl border border-white/10 backdrop-blur-xl shadow-2xl">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+                        </path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Menu Drawer -->
+        <transition name="fade">
+            <div v-if="showMenu"
+                class="fixed inset-0 bg-black/98 backdrop-blur-3xl z-[100] p-8 pb-[calc(2rem+env(safe-area-inset-bottom))] flex flex-col">
+
+                <!-- View Logic for Menu: Volume List vs Story List -->
+                <div class="flex justify-between items-center mb-6 pt-env(safe-area-inset-top)">
+                    <div v-if="!selectedVolume">
+                        <h2 class="text-3xl font-black tracking-tighter text-white uppercase">Library</h2>
+                        <p class="text-xs text-zinc-500 tracking-widest mt-1 uppercase">Select a Scripture Stories book
+                        </p>
+                    </div>
+                    <div v-else>
+                        <button @click="selectedVolume = null"
+                            class="flex items-center gap-2 text-blue-500 font-bold text-xs uppercase tracking-widest mb-1 group">
+                            <svg class="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                    d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                            Back to Library
+                        </button>
+                        <h2 class="text-3xl font-black tracking-tighter text-white uppercase">{{
+                            selectedVolume.replace(/-/g, ' ') }}</h2>
+                    </div>
+                    <button @click="showMenu = false" class="p-3 bg-white/5 rounded-full text-zinc-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Volume Selection Grid -->
+                <div v-if="!selectedVolume"
+                    class="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto pr-2 custom-scrollbar">
+                    <button v-for="(path, key) in volumes" :key="key" @click="selectVolume(key)"
+                        class="p-8 rounded-3xl bg-zinc-900/50 border-2 border-transparent hover:border-blue-500/50 hover:bg-zinc-800 transition-all text-left group">
+                        <h3 class="text-xl font-black tracking-tight mb-1 uppercase group-hover:text-blue-400">{{
+                            key.replace(/-/g, ' ') }}</h3>
+                    </button>
+                </div>
+
+                <!-- Story Selection List -->
+                <div v-else class="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                    <div v-if="loadingStories"
+                        class="py-20 text-center text-zinc-600 font-black tracking-[0.2em] text-xs">LOADING...</div>
+                    <button v-for="story in storyList" :key="story.url" @click="selectStory(story)"
+                        :class="['w-full text-left p-6 rounded-3xl transition-all border-2 flex flex-col gap-1', selectedUrl === story.url ? 'bg-blue-600 border-blue-400 text-white' : 'bg-zinc-900/50 border-transparent hover:border-zinc-700 text-zinc-300']">
+                        <div class="font-bold text-lg leading-tight">{{ story.title }}</div>
+                        <div class="text-xs opacity-60 font-medium line-clamp-1">{{ story.subtitle }}</div>
+                    </button>
+                </div>
+            </div>
+        </transition>
+
+        <!-- Main Display -->
+        <main class="flex-1 relative flex items-center justify-center overflow-hidden" @click="toggleCaption">
+
+            <!-- Home Screen -->
+            <div v-if="!selectedUrl && !loading"
+                class="flex flex-col items-center text-center px-6 pt-[15vh] md:pt-0 max-w-4xl pointer-events-auto h-full justify-start md:justify-center overflow-y-auto custom-scrollbar">
+                <div class="flex-shrink-0 flex flex-col items-center justify-center w-full py-6 md:py-10">
+                    <div
+                        class="w-16 h-16 md:w-20 md:h-20 mb-6 md:mb-8 bg-blue-600/20 rounded-full flex items-center justify-center border border-blue-500/30">
+                        <svg class="w-8 h-8 md:w-10 md:h-10 text-blue-500" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                            </path>
+                        </svg>
+                    </div>
+                    <h1 class="text-4xl md:text-5xl font-black mb-6 tracking-tighter">Scripture
+                        Stories</h1>
+                    <p class="text-zinc-500 leading-relaxed text-base md:text-xl font-light mb-8 md:mb-10 max-w-md">
+                        Select a book of scripture to begin reading the illustrated Scripture Stories.
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 w-full max-w-2xl mb-8 md:mb-12">
+                        <button v-for="(path, key) in volumes" @click.stop="selectVolume(key); showMenu = true"
+                            class="p-5 md:p-6 bg-zinc-900 hover:bg-zinc-800 rounded-3xl border border-white/5 transition-all text-xs md:text-sm font-bold uppercase tracking-widest text-zinc-400 hover:text-white">
+                            {{ key.replace(/-/g, ' ') }}
+                        </button>
+                    </div>
+
+                    <!-- In-line Instructions -->
+                    <div class="bg-zinc-900/10 border border-white/5 p-5 md:p-6 rounded-[0.5rem] max-w-md w-full">
+                        <h4
+                            class="text-[10px] md:text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-2 md:mb-3">
+                            Instructions</h4>
+                        <p class="text-xs md:text-sm text-zinc-400 leading-relaxed font-medium">
+                            Swipe or use arrow keys to read each story.
+                            <br>Tap the screen to toggle story text.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <footer
+                    class="flex-shrink-0 py-10 text-[10px] text-zinc-600 font-bold uppercase tracking-[0.15em] w-full text-center leading-loose px-4">
+                    <span class="inline-block mx-1">This website is NOT an official website of
+                        <a href="https://www.churchofjesuschrist.org" target="_blank"
+                            class="text-blue-500/80 hover:underline whitespace-nowrap">The Church of Jesus Christ of
+                            Latter-day Saints.</a>
+                    </span>
+                    <span class="inline-block mx-1">Images and text from the Scripture Stories are © {{ currentYear }}
+                        by Intellectual Reserve, Inc.</span>
+                </footer>
+            </div>
+
+            <!-- Loading Screen -->
+            <div v-if="loading" class="flex flex-col items-center gap-6 w-72 text-center">
+                <div class="w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
+                    <div class="h-full bg-blue-600 animate-[loading_2s_infinite]"></div>
+                </div>
+                <div class="text-[10px] uppercase tracking-[0.5em] text-blue-500 font-black">
+                    {{ statusMessage }}
+                </div>
+            </div>
+
+            <!-- Slide Viewer -->
+            <div v-else-if="slides.length > 0" class="relative w-full h-full flex items-center justify-center"
+                @touchstart="handleTouchStart" @touchend="handleTouchEnd">
+
+                <div v-if="currentSlide.is_intro"
+                    class="absolute inset-0 flex flex-col items-center justify-center p-12 text-center intro-gradient">
+                    <h2 class="text-4xl md:text-7xl font-black mb-4 tracking-tighter drop-shadow-2xl">{{
+                        currentStoryTitle }}</h2>
+                    <p class="text-xl md:text-3xl font-light text-zinc-400 mb-8 max-w-3xl leading-snug">{{ storySubtitle
+                        }}</p>
+                    <div v-if="storyHeaderRef"
+                        class="px-6 py-2 bg-blue-600/20 border border-blue-500/30 rounded-full text-blue-400 font-bold tracking-widest text-xs uppercase">
+                        {{ storyHeaderRef }}
+                    </div>
+                </div>
+
+                <div v-else class="absolute inset-0 flex items-center justify-center overflow-hidden">
+                    <img :key="currentSlideIndex" :src="currentSlide.image"
+                        :alt="currentSlide.alt_text || 'Illustration'" class="w-full h-full object-contain" />
+                </div>
+
+                <!-- Caption Overlay -->
+                <div v-if="showCaption && !currentSlide.is_intro && currentSlide.caption"
+                    class="absolute bottom-0 left-0 right-0 p-8 pb-20 md:pb-24 bg-black/60 backdrop-blur-sm border-t border-white/5 z-50 pointer-events-none">
+                    <div class="max-w-4xl mx-auto space-y-5 pointer-events-none">
+                        <p class="leading-relaxed text-center font-medium text-white drop-shadow-lg"
+                            :style="{ fontSize: settings.fontSize + 'px' }">
+                            {{ currentSlide.caption }}
+                        </p>
+                        <div v-if="currentSlide.scripture_links && currentSlide.scripture_links.length"
+                            class="flex flex-wrap justify-center gap-3 pointer-events-auto">
+                            <a v-for="link in currentSlide.scripture_links" :href="link.url" target="_blank"
+                                class="text-blue-400 font-black border-b border-blue-500/20 pb-0.5 text-xs md:text-sm uppercase tracking-wider">
+                                {{ link.text }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Stats -->
+                <div
+                    class="absolute bottom-6 left-6 right-6 flex justify-between items-center z-[60] pointer-events-none">
+                    <div
+                        class="text-[10px] font-black text-zinc-500 uppercase tracking-widest bg-black/80 backdrop-blur-md px-2.5 py-1 rounded border border-white/10">
+                        {{ currentSlideIndex + 1 }} / {{ slides.length }}
+                    </div>
+                    <a v-if="sourceUrl" :href="sourceUrl" target="_blank"
+                        class="pointer-events-auto text-[10px] font-black text-blue-500/80 uppercase tracking-widest hover:text-blue-400 flex items-center gap-1.5 bg-black/80 backdrop-blur-md px-2.5 py-1 rounded border border-white/10">
+                        SOURCE <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </main>
+
+        <!-- Settings Modal -->
+        <transition name="fade">
+            <div v-if="showSettings" class="fixed inset-0 z-[110] flex items-center justify-center p-6">
+                <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="showSettings = false"></div>
+                <div
+                    class="relative bg-zinc-900 border border-white/10 p-8 rounded-[2.5rem] w-full max-w-md shadow-2xl">
+                    <h3 class="text-2xl font-black mb-6 uppercase tracking-tighter">Settings</h3>
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-4">Text
+                                Size</label>
+                            <input type="range" min="8" max="32" v-model="settings.fontSize"
+                                class="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                            <div class="flex justify-between text-[10px] text-zinc-500 mt-2 font-black">
+                                <span>SMALL</span>
+                                <span class="text-blue-500">{{ settings.fontSize }}PX</span>
+                                <span>LARGE</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button @click="showSettings = false"
+                        class="mt-8 w-full py-4 bg-zinc-800 hover:bg-zinc-750 rounded-2xl font-bold transition-colors">Close</button>
+                </div>
+            </div>
+        </transition>
+
+        <!-- Progress Bar -->
+        <div v-if="slides.length > 0" class="h-1 w-full bg-zinc-950 z-[80] relative">
+            <div class="h-full bg-blue-600 transition-all duration-300"
+                :style="{ width: ((currentSlideIndex + 1) / slides.length * 100) + '%' }"></div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, onUnmounted, watch } = Vue;
+
+        createApp({
+            setup() {
+                const API_BASE = window.location.origin;
+                const volumes = {
+                    "old-testament": "Old Testament",
+                    "new-testament": "New Testament",
+                    "book-of-mormon": "Book of Mormon",
+                    "doctrine-and-covenants": "Doctrine & Covenants"
+                };
+
+                const currentYear = new Date().getFullYear();
+                const settings = ref({ fontSize: 22 });
+                const showSettings = ref(false);
+
+                const selectedVolume = ref(null);
+                const storyList = ref([]);
+                const selectedUrl = ref("");
+                const sourceUrl = ref("");
+                const currentStoryTitle = ref("");
+                const storySubtitle = ref("");
+                const storyHeaderRef = ref("");
+                const slides = ref([]);
+                const currentSlideIndex = ref(0);
+
+                const loading = ref(false);
+                const loadingStories = ref(false);
+                const statusMessage = ref("");
+                const showCaption = ref(true);
+                const showMenu = ref(false);
+
+                const touchStartX = ref(0);
+                const touchStartY = ref(0);
+                const wheelAccumulatorX = ref(0);
+                const lastWheelTime = ref(0);
+
+                onMounted(() => {
+                    const saved = localStorage.getItem('scripture-story-settings');
+                    if (saved) settings.value = JSON.parse(saved);
+                    window.addEventListener("keydown", handleKey);
+                });
+
+                watch(settings, (val) => {
+                    localStorage.setItem('scripture-story-settings', JSON.stringify(val));
+                }, { deep: true });
+
+                const selectVolume = async (volKey) => {
+                    selectedVolume.value = volKey;
+                    loadingStories.value = true;
+                    try {
+                        const res = await fetch(`${API_BASE}/api/stories?volume=${volKey}`);
+                        storyList.value = await res.json();
+                    } catch (e) { console.error("Volume Load Error"); }
+                    finally { loadingStories.value = false; }
+                };
+
+                const selectStory = (story) => {
+                    selectedUrl.value = story.url;
+                    currentStoryTitle.value = story.title;
+                    storySubtitle.value = story.subtitle;
+                    storyHeaderRef.value = story.scripture_ref;
+                    showMenu.value = false;
+                    loadStory();
+                };
+
+                // Native Browser Caching Strategy:
+                // We create a new Image() object for every slide and set the .src.
+                // The browser starts downloading it. Because it's a standard Image tag,
+                // it doesn't trigger CORS blocks, but it DOES populate the cache.
+                const preloadImagesNative = (slidesList) => {
+                    return Promise.all(slidesList.filter(s => !s.is_intro).map(slide => {
+                        return new Promise((resolve) => {
+                            const img = new Image();
+                            img.onload = resolve;
+                            img.onerror = resolve;
+                            img.src = slide.image;
+                        });
+                    }));
+                };
+
+                const loadStory = async () => {
+                    loading.value = true;
+                    statusMessage.value = "Preparing Story...";
+                    slides.value = [];
+                    currentSlideIndex.value = 0;
+                    showCaption.value = true;
+                    try {
+                        const res = await fetch(`${API_BASE}/api/content?url=${encodeURIComponent(selectedUrl.value)}`);
+                        const data = await res.json();
+                        sourceUrl.value = data.source_url;
+                        const newList = [{ is_intro: true }, ...data.slides];
+                        slides.value = newList;
+
+                        statusMessage.value = "Loading images...";
+                        // Wait for images to download into browser cache
+                        await preloadImagesNative(newList);
+                    } catch (e) {
+                        statusMessage.value = "Load Error";
+                    }
+                    finally { loading.value = false; }
+                };
+
+                const currentSlide = computed(() => slides.value[currentSlideIndex.value] || {});
+                const nextSlide = () => { if (currentSlideIndex.value < slides.value.length - 1) currentSlideIndex.value++; };
+                const prevSlide = () => { if (currentSlideIndex.value > 0) currentSlideIndex.value--; };
+                const toggleCaption = () => { if (!loading.value && slides.value.length > 0) showCaption.value = !showCaption.value; };
+
+                const handleTouchStart = (e) => {
+                    if (e.touches.length > 1) return;
+                    touchStartX.value = e.changedTouches[0].screenX;
+                    touchStartY.value = e.changedTouches[0].screenY;
+                };
+
+                const handleTouchEnd = (e) => {
+                    if (e.touches.length > 0) return;
+                    const diffX = touchStartX.value - e.changedTouches[0].screenX;
+                    const diffY = touchStartY.value - e.changedTouches[0].screenY;
+                    if (Math.abs(diffX) > 60 && Math.abs(diffX) > Math.abs(diffY)) {
+                        diffX > 0 ? nextSlide() : prevSlide();
+                    }
+                };
+
+                const handleWheel = (e) => {
+                    if (showMenu.value || slides.value.length === 0) return;
+                    const now = Date.now();
+                    if (now - lastWheelTime.value > 200) wheelAccumulatorX.value = 0;
+                    lastWheelTime.value = now;
+                    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
+                    wheelAccumulatorX.value += e.deltaX;
+                    if (Math.abs(wheelAccumulatorX.value) >= 50) {
+                        wheelAccumulatorX.value > 0 ? nextSlide() : prevSlide();
+                        wheelAccumulatorX.value = 0;
+                        lastWheelTime.value = now + 400;
+                    }
+                };
+
+                const handleKey = (e) => {
+                    if (showMenu.value || showSettings.value) return;
+                    if (e.key === "ArrowRight") nextSlide();
+                    if (e.key === "ArrowLeft") prevSlide();
+                };
+
+                onUnmounted(() => window.removeEventListener("keydown", handleKey));
+
+                return {
+                    volumes, selectedVolume, storyList, selectedUrl, slides, currentSlideIndex,
+                    loading, loadingStories, showCaption, currentSlide, showMenu, currentStoryTitle,
+                    statusMessage, sourceUrl, storySubtitle, storyHeaderRef, currentYear,
+                    settings, showSettings,
+                    loadStory, nextSlide, prevSlide, toggleCaption,
+                    handleTouchStart, handleTouchEnd, selectStory, handleWheel, selectVolume
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>
