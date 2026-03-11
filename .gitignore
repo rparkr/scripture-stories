@@ -10,7 +10,3 @@
 # Ruff linting and formatting
 **/.ruff_cache/
 
-# Cloudflare workers
-**/.wrangler
-**/.venv-workers
-**/python_modules/

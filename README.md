@@ -3,6 +3,34 @@ Read [scripture stories](https://www.churchofjesuschrist.org/study/scriptures/sc
 
 > Try it out! Visit: https://rparkr.github.io/scripture-stories/
 
+> [!NOTE]
+> The backend is not yet hosted, so the URL above will not load the individual stories.
+> 
+> To try this out locally, clone this repository and run [backend/main.py](./backend/main.py):
+> 
+> ```shell
+> # Install uv if you don't have it yet
+> curl -LsSf https://astral.sh/uv/install.sh | sh
+> ```
+> 
+> ```shell
+> # Run the backend
+> git clone https://github.com/rparkr/scripture-stories.git
+> cd ./scripture-stories/backend
+> uv run main.py
+> ```
+> 
+> Output:
+> ```
+> 📖 Scripture Stories app is now running
+> 👉 Go to: http://192.168.68.56:8000
+> 
+> INFO:     Started server process [16835]
+> INFO:     Waiting for application startup.
+> INFO:     Application startup complete.
+> INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+> ```
+
 ## Screenshots
 **Desktop view of main page**  
 ![Desktop view showing main page](docs/images/desktop_view.webp)

@@ -5,14 +5,12 @@ description = "Read Scripture Stories as engaging slideshows"
 readme = "README.md"
 authors = [{ name = "Ryan Parker", email = "ryanparker.ml@gmail.com" }]
 requires-python = ">=3.12"
-dependencies = ["beautifulsoup4", "fastapi", "httpx"]
+dependencies = ["beautifulsoup4", "fastapi", "httpx", "uvicorn"]
 
-# [project.optional-dependencies]
-# local = ["uvicorn>=0.41.0"]
+[project.optional-dependencies]
+local = ["uvicorn>=0.41.0"]
 
 [dependency-groups]
 dev = [
-    # "ruff",
-    # "workers-py",
-    "workers-runtime-sdk",
+    "ruff",
 ]

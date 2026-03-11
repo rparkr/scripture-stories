@@ -1,9 +1,9 @@
 # /// script
 # dependencies = [
-#   "fastapi",
-#   "uvicorn",
-#   "httpx",
 #   "beautifulsoup4",
+#   "fastapi",
+#   "httpx",
+#   "uvicorn",
 # ]
 # ///
 
@@ -11,13 +11,12 @@ import re
 import socket
 from enum import StrEnum
 
-import asgi
 import httpx
 from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from workers import WorkerEntrypoint
 
 BASE_URL = "https://www.churchofjesuschrist.org"
 USER_AGENT = "ScriptureStories/0.1.0 (https://github.com/rparkr/scripture-stories)"
@@ -40,13 +39,6 @@ VOLUMES = {
 
 
 app = FastAPI()
-
-
-class Default(WorkerEntrypoint):
-    """Cloudflare Worker entrypoint that delegates to FastAPI app."""
-
-    async def fetch(self, request):
-        return await asgi.fetch(app, request, self.env)
 
 
 class LocalIP:
@@ -107,10 +99,10 @@ app.add_middleware(
 @app.get("/")
 async def serve_index():
     # For local development, you can serve the static frontend directly from
-    # FastAPI. In production (Cloudflare Workers), the frontend is served
-    # separately through GitHub Pages, so we just return a message here.
-    # return FileResponse("../docs/index.html")
-    return {"message": "Access '/docs' for API documentation."}
+    # FastAPI. If the frontend is served separately (e.g., through GitHub Pages), just
+    # return a simple message:
+    # return {"message": "Access '/docs' for API documentation."}
+    return FileResponse("../docs/index.html")
 
 
 async def fetch_page(url: str):
