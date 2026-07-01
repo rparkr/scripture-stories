@@ -1,6 +1,6 @@
 ## Context
 
-The Scripture Stories frontend is a single-page Vue.js application served statically from `/docs/index.html`. It currently fetches story structures and slides from the `/api/stories` and `/api/content` endpoints of a local backend, and displays images hosted on `https://www.churchofjesuschrist.org`. Without internet/local server connectivity, the user cannot read the stories. Implementing local caching and pre-fetching will enable a fully offline reading experience once a book or story has been downloaded.
+The Scripture Stories frontend is a single-page Vue.js application served statically from `/frontend/index.html`. It currently fetches story structures and slides from the `/api/stories` and `/api/content` endpoints of a local backend, and displays images hosted on `https://www.churchofjesuschrist.org`. Without internet/local server connectivity, the user cannot read the stories. Implementing local caching and pre-fetching will enable a fully offline reading experience once a book or story has been downloaded.
 
 ## Goals / Non-Goals
 

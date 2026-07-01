@@ -18,5 +18,5 @@ The application currently relies on live network requests to fetch lists of scri
 
 ## Impact
 
-- **Frontend (`docs/index.html`)**: Will require modifications to integrate a client-side storage mechanism (Cache Storage API or IndexedDB), update the settings modal with cache management tools, update the book list UI with pre-fetching options/progress bars, and load content from the local cache when available.
+- **Frontend (`frontend/index.html`)**: Will require modifications to integrate a client-side storage mechanism (Cache Storage API or IndexedDB), update the settings modal with cache management tools, update the book list UI with pre-fetching options/progress bars, and load content from the local cache when available.
 - **Backend (`backend/main.py`)**: Will receive concurrent and parallel requests from clients pre-fetching entire books, which might require handling concurrent connections gracefully.

@@ -1,12 +1,12 @@
 ## 1. Service Worker Setup
 
-- [x] 1.1 Create `docs/sw.js` to handle intercepting network requests for API content and cross-origin images, storing them in Cache Storage
-- [x] 1.2 Register `sw.js` in `docs/index.html` upon Vue application mounting and ensure registration is successful
+- [x] 1.1 Create `frontend/sw.js` to handle intercepting network requests for API content and cross-origin images, storing them in Cache Storage
+- [x] 1.2 Register `sw.js` in `frontend/index.html` upon Vue application mounting and ensure registration is successful
 
 ## 2. Frontend Cache Utilities and Management UI
 
 - [x] 2.1 Implement helper methods in Vue app to query which stories/books are cached by inspecting Cache Storage keys
-- [x] 2.2 Add settings options in the settings modal of `docs/index.html` to view cache status and clear cache for individual stories or entire books
+- [x] 2.2 Add settings options in the settings modal of `frontend/index.html` to view cache status and clear cache for individual stories or entire books
 
 ## 3. Parallel Pre-fetching Logic and Progress UI
 

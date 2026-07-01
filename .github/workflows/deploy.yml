@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Deploy frontend to GitHub Pages and backend to AWS Lambda
 
 on:
   push:
@@ -8,18 +8,69 @@ on:
     branches:
       - main
 
+# Permissions required to utilize OIDC security authentication with AWS
+# and GitHub Pages deployment.
 permissions:
   contents: read
   pages: write
   id-token: write
+
+env:
+  AWS_REGION: us-east-2
+  ECR_REPOSITORY: scripture-stories-fastapi-backend
+  LAMBDA_FUNCTION_NAME: scripture-stories-lambda
 
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Deploy Frontend
+  deploy-backend:
+    name: Deploy backend to AWS Lambda
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      
+      # Authenticate securely with AWS using OIDC
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          # audience: sts.amazonaws.com
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Backend-${{ github.run_id }}
+
+      - name: Log in to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      # Build the image natively for ARM64 architecture
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+            ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Direct AWS Lambda to pull and deploy the newly pushed container image
+      - name: Update AWS Lambda Code
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+            --image-uri ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+
+  deploy-frontend:
+    name: Deploy frontend
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -32,10 +83,18 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      - name: Create runtime config
+        env:
+          BACKEND_API_URL: ${{ secrets.BACKEND_API_URL }}
+        run: |
+          cat > frontend/runtime-config.js <<EOF
+          window.BACKEND_API_URL = '${BACKEND_API_URL}';
+          EOF
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: "docs"
+          path: "frontend"
 
       - name: Deploy to GitHub Pages
         id: deployment

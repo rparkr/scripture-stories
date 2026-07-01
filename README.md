@@ -1,12 +1,13 @@
 # Scripture Stories
 Read [scripture stories](https://www.churchofjesuschrist.org/study/scriptures/scripture-stories?lang=eng) from [The Church of Jesus Christ of Latter-day Saints](https://www.churchofjesuschrist.org/) through an engaging slideshow experience.
 
+> [!TIP]
 > Try it out! Visit: https://rparkr.github.io/scripture-stories/
+> 
+> The backend is served via AWS Lambda; scripture stories are cached to your device for offline viewing, and you can also pre-download all stories at once for a fully offline experience.
 
 > [!NOTE]
-> The backend is not yet hosted, so the URL above will not load the individual stories.
-> 
-> To try this out locally, clone this repository and run [backend/main.py](./backend/main.py):
+> You can also try this out locally, clone this repository and run [backend/main.py](./backend/main.py):
 > 
 > ```shell
 > # Install uv if you don't have it yet
@@ -23,7 +24,7 @@ Read [scripture stories](https://www.churchofjesuschrist.org/study/scriptures/sc
 > Output:
 > ```
 > 📖 Scripture Stories app is now running
-> 👉 Go to: http://192.168.68.56:8000
+> 👉 Go to: http://localhost:8000
 > 
 > INFO:     Started server process [16835]
 > INFO:     Waiting for application startup.
@@ -33,16 +34,16 @@ Read [scripture stories](https://www.churchofjesuschrist.org/study/scriptures/sc
 
 ## Screenshots
 **Desktop view of main page**  
-![Desktop view showing main page](docs/images/desktop_view.webp)
+![Desktop view showing main page](frontend/images/desktop_view.webp)
 
 **Smartphone view of a slide in a scripture story**  
-![Mobile view showing slide from scripture story](docs/images/mobile_view.webp)
+![Mobile view showing slide from scripture story](frontend/images/mobile_view.webp)
 
 **Smartphone view showing story selection**  
-![Mobile view showing list of scripture stories](docs/images/mobile_view_story_list.webp)
+![Mobile view showing list of scripture stories](frontend/images/mobile_view_story_list.webp)
 
 **Captions can be hidden by tapping the screen; font size can be adjusted**  
-![Mobile view showing font size configuration](docs/images/mobile_view_font_size.webp)
+![Mobile view showing font size configuration](frontend/images/mobile_view_font_size.webp)
 
 ## Disclaimer
 This is a hobby project and is not an official website of [The Church of Jesus Christ of Latter-day Saints](https://www.churchofjesuschrist.org/).

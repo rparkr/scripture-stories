@@ -9,14 +9,14 @@
 # ///
 
 import re
-import socket
 from enum import StrEnum
+from pathlib import Path
 
 import httpx
 from bs4 import BeautifulSoup
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 BASE_URL = "https://www.churchofjesuschrist.org"
@@ -41,48 +41,14 @@ VOLUMES = {
 
 app = FastAPI()
 
-
-class LocalIP:
-    """Singleton class that computes and caches the local IP address."""
-
-    _instance = None
-    _ip: str
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._ip = cls._compute_ip()
-        return cls._instance
-
-    @staticmethod
-    def _compute_ip() -> str:
-        """Get local IP address by attempting to connect to a remote socket."""
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            s.connect(("8.8.8.8", 1))
-            ip = s.getsockname()[0]
-        except Exception:
-            ip = "127.0.0.1"
-        finally:
-            s.close()
-        return ip
-
-    def __str__(self) -> str:
-        return self._ip
-
-    def __repr__(self) -> str:
-        return self._ip
-
-
 # Configure CORS for GitHub Pages and local development
 allowed_origins = [
+    "https://rparkr.github.io",  # GitHub Pages domain
+    "https://rparkr.github.io/scripture-stories",  # GitHub Pages repo
     "http://localhost:3000",  # Local frontend development
     "http://localhost:8000",  # Local testing
     "http://127.0.0.1:3000",
     "http://127.0.0.1:8000",
-    str(LocalIP()),
-    "https://rparkr.github.io",  # GitHub Pages domain
-    "https://rparkr.github.io/scripture-stories",  # GitHub Pages repo
 ]
 
 # Remove None values (from get_local_ip edge cases)
@@ -93,17 +59,51 @@ app.add_middleware(
     allow_origins=allowed_origins,
     allow_methods=["GET", "OPTIONS"],
     allow_headers=["*"],
-    allow_credentials=False,
+    allow_credentials=True,
 )
+
+
+@app.middleware("http")
+async def restrict_to_github_pages(request: Request, call_next):
+    # 1. Allow local readiness checks and preflight requests
+    if request.method == "OPTIONS" or request.url.path == "/":
+        return await call_next(request)
+
+    origin = request.headers.get("origin")
+    referer = request.headers.get("referer")
+    allowed_origin = allowed_origins[0]
+
+    # 2. Allow local CLI debugging (optional, but helpful for curl http://localhost:8000)
+    host = request.headers.get("host", "")
+    if "localhost" in host or "127.0.0.1" in host:
+        return await call_next(request)
+
+    # 3. Enforce strict origin validation for external production traffic
+    if origin and origin != allowed_origin:
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Forbidden: Request origin unauthorized."},
+        )
+
+    if referer and not referer.startswith(allowed_origin):
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Forbidden: Request referrer unauthorized."},
+        )
+
+    return await call_next(request)
 
 
 @app.get("/")
 async def serve_index():
     # For local development, you can serve the static frontend directly from
     # FastAPI. If the frontend is served separately (e.g., through GitHub Pages), just
-    # return a simple message:
-    # return {"message": "Access '/docs' for API documentation."}
-    return FileResponse("../docs/index.html")
+    # return a simple message.
+    if not Path("../frontend/index.html").exists():
+        return {
+            "status": "Scripture Stories API is running on AWS Lambda via Lambda Web Adapter."
+        }
+    return FileResponse("../frontend/index.html")
 
 
 async def fetch_page(url: str):
@@ -255,11 +255,9 @@ def main():
 
     # Serve the frontend static files and enable SPA fallback for unknown
     # non-API paths by using `html=True` so index.html is returned.
-    app.mount("/", StaticFiles(directory="../docs", html=True), name="static")
-    local_ip = LocalIP()
+    app.mount("/", StaticFiles(directory="../frontend", html=True), name="static")
     print(
-        f"\n📖 Scripture Stories app is now running\n👉 Go to: http://{local_ip}:8000\n"
-        "or go to http://localhost:8000 if running locally.\n"
+        "\n📖 Scripture Stories app is now running\n👉 Go to: http://localhost:8000\n"
     )
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
