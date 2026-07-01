@@ -143,9 +143,18 @@
                 <div v-if="!selectedVolume"
                     class="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto pr-2 custom-scrollbar">
                     <button v-for="(path, key) in volumes" :key="key" @click="selectVolume(key)"
-                        class="p-8 rounded-3xl bg-zinc-900/50 border-2 border-transparent hover:border-blue-500/50 hover:bg-zinc-800 transition-all text-left group">
+                        class="p-8 rounded-3xl bg-zinc-900/50 border-2 border-transparent hover:border-blue-500/50 hover:bg-zinc-800 transition-all text-left group relative">
                         <h3 class="text-xl font-black tracking-tight mb-1 uppercase group-hover:text-blue-400">{{
                             key.replace(/-/g, ' ') }}</h3>
+                        <!-- Cache Status Badge -->
+                        <span v-if="bookStatuses[key] && bookStatuses[key].isCached" class="absolute top-8 right-8 text-blue-500">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </span>
+                        <span v-else-if="bookStatuses[key] && bookStatuses[key].cachedCount > 0" class="absolute top-8 right-8 text-zinc-500 text-xs font-bold bg-zinc-950 px-2 py-1 rounded-xl">
+                            {{ bookStatuses[key].cachedCount }} / {{ bookStatuses[key].totalCount }}
+                        </span>
                     </button>
                 </div>
 
@@ -154,9 +163,16 @@
                     <div v-if="loadingStories"
                         class="py-20 text-center text-zinc-600 font-black tracking-[0.2em] text-xs">LOADING...</div>
                     <button v-for="story in storyList" :key="story.url" @click="selectStory(story)"
-                        :class="['w-full text-left p-6 rounded-3xl transition-all border-2 flex flex-col gap-1', selectedUrl === story.url ? 'bg-blue-600 border-blue-400 text-white' : 'bg-zinc-900/50 border-transparent hover:border-zinc-700 text-zinc-300']">
-                        <div class="font-bold text-lg leading-tight">{{ story.title }}</div>
-                        <div class="text-xs opacity-60 font-medium line-clamp-1">{{ story.subtitle }}</div>
+                        :class="['w-full text-left p-6 rounded-3xl transition-all border-2 flex flex-col gap-1 relative overflow-hidden', selectedUrl === story.url ? 'bg-blue-600 border-blue-400 text-white' : 'bg-zinc-900/50 border-transparent hover:border-zinc-700 text-zinc-300']">
+                        <!-- Offline Indicator Badge -->
+                        <div v-if="cachedUrls.has(story.url)" class="absolute top-4 right-4 flex items-center gap-1 bg-blue-500/20 border border-blue-500/30 text-blue-400 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
+                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Offline
+                        </div>
+                        <div class="font-bold text-lg leading-tight pr-16">{{ story.title }}</div>
+                        <div class="text-xs opacity-60 font-medium line-clamp-1 pr-16">{{ story.subtitle }}</div>
                     </button>
                 </div>
             </div>
@@ -185,8 +201,17 @@
                     </p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 w-full max-w-2xl mb-8 md:mb-12">
                         <button v-for="(path, key) in volumes" @click.stop="selectVolume(key); showMenu = true"
-                            class="p-5 md:p-6 bg-zinc-900 hover:bg-zinc-800 rounded-3xl border border-white/5 transition-all text-xs md:text-sm font-bold uppercase tracking-widest text-zinc-400 hover:text-white">
+                            class="p-5 md:p-6 bg-zinc-900 hover:bg-zinc-800 rounded-3xl border border-white/5 transition-all text-xs md:text-sm font-bold uppercase tracking-widest text-zinc-400 hover:text-white relative">
                             {{ key.replace(/-/g, ' ') }}
+                            <!-- Cache Status Indicator Badge -->
+                            <span v-if="bookStatuses[key] && bookStatuses[key].isCached" class="absolute -top-1.5 -right-1.5 bg-blue-600 text-white p-1 rounded-full border border-zinc-950">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3.5" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </span>
+                            <span v-else-if="bookStatuses[key] && bookStatuses[key].cachedCount > 0" class="absolute -top-1.5 -right-1.5 bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded-full text-[9px] font-bold border border-zinc-950">
+                                {{ bookStatuses[key].cachedCount }}
+                            </span>
                         </button>
                     </div>
 
@@ -287,9 +312,9 @@
             <div v-if="showSettings" class="fixed inset-0 z-[110] flex items-center justify-center p-6">
                 <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="showSettings = false"></div>
                 <div
-                    class="relative bg-zinc-900 border border-white/10 p-8 rounded-[2.5rem] w-full max-w-md shadow-2xl">
-                    <h3 class="text-2xl font-black mb-6 uppercase tracking-tighter">Settings</h3>
-                    <div class="space-y-6">
+                    class="relative bg-zinc-900 border border-white/10 p-8 rounded-[2.5rem] w-full max-w-md shadow-2xl max-h-[85vh] flex flex-col">
+                    <h3 class="text-2xl font-black mb-6 uppercase tracking-tighter flex-shrink-0">Settings</h3>
+                    <div class="space-y-6 overflow-y-auto pr-1 custom-scrollbar flex-1">
                         <div>
                             <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-4">Text
                                 Size</label>
@@ -301,9 +326,98 @@
                                 <span>LARGE</span>
                             </div>
                         </div>
+
+                        <!-- Offline Cache Settings -->
+                        <div class="border-t border-white/10 pt-6">
+                            <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-4">Offline Storage</label>
+                            
+                            <!-- Book Caches -->
+                            <div class="space-y-3">
+                                <div v-for="(path, key) in volumes" :key="key" 
+                                    class="p-4 rounded-2xl bg-zinc-950/40 border border-white/5 flex justify-between items-center">
+                                    <div class="max-w-[60%]">
+                                        <div class="font-bold text-xs uppercase tracking-tight text-zinc-200">{{ key.replace(/-/g, ' ') }}</div>
+                                        <div class="text-[9px] font-bold text-zinc-500 uppercase mt-0.5">
+                                            <span v-if="bookStatuses[key] && bookStatuses[key].totalCount > 0" 
+                                                :class="bookStatuses[key].isCached ? 'text-blue-400' : 'text-zinc-500'">
+                                                {{ bookStatuses[key].cachedCount }} / {{ bookStatuses[key].totalCount }} Stories
+                                            </span>
+                                            <span v-else class="italic text-zinc-600">Unloaded (open menu first)</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button v-if="!bookStatuses[key] || !bookStatuses[key].isCached"
+                                            @click="prefetchBook(key)"
+                                            class="p-2 bg-blue-600/20 hover:bg-blue-600 border border-blue-500/30 text-blue-400 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-wider transition-all">
+                                            Download
+                                        </button>
+                                        <button v-if="bookStatuses[key] && bookStatuses[key].cachedCount > 0"
+                                            @click="clearBookCache(key)"
+                                            class="p-2 bg-red-950/20 hover:bg-red-900 border border-red-900/30 text-red-400 hover:text-white rounded-xl text-[9px] font-black uppercase tracking-wider transition-all">
+                                            Clear
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Individual Cached Stories List -->
+                            <div v-if="cachedUrls.size > 0" class="mt-6">
+                                <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3">Downloaded Stories ({{ cachedUrls.size }})</label>
+                                <div class="max-h-40 overflow-y-auto pr-1 custom-scrollbar space-y-2 border border-white/5 rounded-2xl bg-zinc-950/30 p-2">
+                                    <div v-for="story in getAllCachedStories()" :key="story.url" 
+                                        class="flex justify-between items-center p-2 bg-zinc-900/60 rounded-xl text-xs gap-3">
+                                        <span class="truncate font-semibold text-zinc-300 text-[11px] uppercase tracking-tight">{{ story.title }}</span>
+                                        <button @click="clearStoryCache(story.url)" 
+                                            class="flex-shrink-0 text-red-500 hover:text-red-400 text-[9px] font-black uppercase tracking-wider transition-colors">
+                                            Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <button @click="showSettings = false"
-                        class="mt-8 w-full py-4 bg-zinc-800 hover:bg-zinc-750 rounded-2xl font-bold transition-colors">Close</button>
+                        class="mt-6 w-full py-4 bg-zinc-800 hover:bg-zinc-750 rounded-2xl font-bold transition-colors flex-shrink-0">Close</button>
+                </div>
+            </div>
+        </transition>
+
+        <!-- Pre-fetching Progress Overlay -->
+        <transition name="fade">
+            <div v-if="prefetching" class="fixed inset-0 z-[120] flex items-center justify-center p-6">
+                <div class="absolute inset-0 bg-black/95 backdrop-blur-md"></div>
+                <div class="relative bg-zinc-900 border border-white/10 p-8 rounded-[2.5rem] w-full max-w-md shadow-2xl text-center space-y-6">
+                    <div class="w-16 h-16 mx-auto bg-blue-600/20 rounded-full flex items-center justify-center border border-blue-500/30 animate-pulse">
+                        <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10">
+                            </path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black uppercase tracking-tight text-white">Downloading Book</h3>
+                        <p class="text-xs text-blue-500 font-black mt-1 uppercase tracking-widest">{{ prefetchBookName }}</p>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="space-y-2 text-left">
+                        <div class="w-full h-3 bg-zinc-800 rounded-full overflow-hidden border border-white/5">
+                            <div class="h-full bg-blue-600 transition-all duration-300" :style="{ width: prefetchProgress + '%' }"></div>
+                        </div>
+                        <div class="flex justify-between text-[10px] font-black text-zinc-500">
+                            <span>PROGRESS</span>
+                            <span class="text-blue-500">{{ prefetchProgress }}%</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Status message -->
+                    <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-wider line-clamp-1 italic">{{ prefetchStatus }}</p>
+                    
+                    <!-- Cancel Button -->
+                    <button @click="cancelPrefetch"
+                        class="w-full py-4 bg-zinc-800 hover:bg-red-950 hover:text-red-200 border border-white/5 rounded-2xl font-bold transition-all uppercase tracking-wider text-xs">
+                        Cancel Download
+                    </button>
                 </div>
             </div>
         </transition>
@@ -353,10 +467,346 @@
                 const wheelAccumulatorX = ref(0);
                 const lastWheelTime = ref(0);
 
-                onMounted(() => {
+                // Caching & Pre-fetching State
+                const cachedUrls = ref(new Set());
+                const bookStatuses = ref({});
+                const prefetching = ref(false);
+                const prefetchBookName = ref('');
+                const prefetchProgress = ref(0);
+                const prefetchStatus = ref('');
+                const storyTitles = ref({});
+                let prefetchController = null;
+
+                /**
+                 * Returns all cache keys from the SW cache as an array of Request objects.
+                 * Uses a helper so cache scanning is always origin-agnostic.
+                 */
+                const getCacheKeys = async () => {
+                    if (!('caches' in window)) return [];
+                    const cache = await caches.open('scripture-stories-cache-v1');
+                    return cache.keys();
+                };
+
+                /**
+                 * Performs a cache lookup that is robust to origin mismatches.
+                 * When the app is accessed via different hosts (e.g. localhost vs LAN IP),
+                 * the cache key origin may differ. This scans all keys and matches on
+                 * pathname + search string instead of full URL.
+                 */
+                const cacheMatchByPath = async (cache, keys, pathAndQuery) => {
+                    for (const request of keys) {
+                        const u = new URL(request.url);
+                        if ((u.pathname + u.search) === pathAndQuery) {
+                            return cache.match(request);
+                        }
+                    }
+                    return undefined;
+                };
+
+                const checkCachedStories = async () => {
+                    if (!('caches' in window)) return;
+                    try {
+                        const keys = await getCacheKeys();
+                        const cachedContentUrls = new Set();
+                        
+                        for (const request of keys) {
+                            const url = request.url;
+                            if (url.includes('/api/content?url=')) {
+                                const searchParams = new URL(url).searchParams;
+                                const storyUrl = searchParams.get('url');
+                                if (storyUrl) {
+                                    cachedContentUrls.add(storyUrl);
+                                }
+                            }
+                        }
+                        cachedUrls.value = cachedContentUrls;
+                    } catch (e) {
+                        console.error('Error checking cached stories:', e);
+                    }
+                };
+
+                const updateBookCachedStatuses = async () => {
+                    if (!('caches' in window)) return;
+                    try {
+                        const cache = await caches.open('scripture-stories-cache-v1');
+                        const keys = await cache.keys();
+                        const statuses = {};
+
+                        for (const volKey of Object.keys(volumes)) {
+                            // Use origin-agnostic path matching to find the cached story list.
+                            // This handles the case where the app was cached on a different host
+                            // (e.g., LAN IP on one session vs. localhost on another).
+                            const listPath = `/api/stories?volume=${volKey}`;
+                            const cachedListRes = await cacheMatchByPath(cache, keys, listPath);
+                            
+                            let stories = [];
+                            if (cachedListRes) {
+                                try {
+                                    stories = await cachedListRes.json();
+                                } catch (err) {}
+                            }
+
+                            // Do NOT fall back to a live network fetch here.
+                            // The status display should only reflect what is truly
+                            // available offline (i.e., in the cache).
+                            if (stories && stories.length > 0) {
+                                let cachedCount = 0;
+                                for (const story of stories) {
+                                    const contentPath = `/api/content?url=${encodeURIComponent(story.url)}`;
+                                    const hasContent = await cacheMatchByPath(cache, keys, contentPath);
+                                    if (hasContent) {
+                                        cachedCount++;
+                                    }
+                                }
+                                statuses[volKey] = {
+                                    cachedCount,
+                                    totalCount: stories.length,
+                                    isCached: cachedCount === stories.length && stories.length > 0,
+                                    hasSome: cachedCount > 0
+                                };
+                            } else {
+                                // Story list not in cache — we can still count cached story
+                                // content entries for this volume using what checkCachedStories found.
+                                // We use cachedUrls which is populated from cache keys directly.
+                                // Since we don't know the total, mark as partial/unknown.
+                                statuses[volKey] = {
+                                    cachedCount: 0,
+                                    totalCount: 0,
+                                    isCached: false,
+                                    hasSome: false
+                                };
+                            }
+                        }
+                        bookStatuses.value = statuses;
+                    } catch (e) {
+                        console.error('Error updating book cached statuses:', e);
+                    }
+                };
+
+                const populateStoryTitles = async () => {
+                    if (!('caches' in window)) return;
+                    try {
+                        const keys = await getCacheKeys();
+                        const cache = await caches.open('scripture-stories-cache-v1');
+                        for (const request of keys) {
+                            const url = request.url;
+                            if (url.includes('/api/stories?volume=')) {
+                                const res = await cache.match(request);
+                                if (res) {
+                                    try {
+                                        const stories = await res.json();
+                                        for (const story of stories) {
+                                            storyTitles.value[story.url] = story.title;
+                                        }
+                                    } catch (err) {}
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error populating story titles:', e);
+                    }
+                };
+
+                const clearStoryCache = async (storyUrl) => {
+                    if (!('caches' in window)) return;
+                    try {
+                        const cache = await caches.open('scripture-stories-cache-v1');
+                        const keys = await cache.keys();
+                        const contentPath = `/api/content?url=${encodeURIComponent(storyUrl)}`;
+                        
+                        // Find and read the cached entry using origin-agnostic matching
+                        const cachedReq = keys.find(r => {
+                            const u = new URL(r.url);
+                            return (u.pathname + u.search) === contentPath;
+                        });
+                        if (cachedReq) {
+                            try {
+                                const cachedRes = await cache.match(cachedReq);
+                                const data = cachedRes && await cachedRes.json();
+                                if (data && data.slides) {
+                                    for (const slide of data.slides) {
+                                        if (slide.image) {
+                                            // Delete image by the stored request object
+                                            const imgReq = keys.find(r => r.url === slide.image);
+                                            if (imgReq) await cache.delete(imgReq);
+                                        }
+                                    }
+                                }
+                            } catch (err) {}
+                            await cache.delete(cachedReq);
+                        }
+                        
+                        await checkCachedStories();
+                        await updateBookCachedStatuses();
+                    } catch (e) {
+                        console.error('Error clearing story cache:', e);
+                    }
+                };
+
+                const clearBookCache = async (volKey) => {
+                    if (!('caches' in window)) return;
+                    try {
+                        const cache = await caches.open('scripture-stories-cache-v1');
+                        let keys = await cache.keys();
+
+                        let stories = [];
+                        if (selectedVolume.value === volKey && storyList.value.length > 0) {
+                            stories = storyList.value;
+                        } else {
+                            // Use origin-agnostic matching to find cached story list
+                            const listPath = `/api/stories?volume=${volKey}`;
+                            const cachedListRes = await cacheMatchByPath(cache, keys, listPath);
+                            if (cachedListRes) {
+                                try { stories = await cachedListRes.json(); } catch (err) {}
+                            }
+                            if (!stories || stories.length === 0) {
+                                // Fall back to live fetch only for clearing (we need the list of stories to delete)
+                                try {
+                                    const listUrl = `${API_BASE}/api/stories?volume=${volKey}`;
+                                    const res = await fetch(listUrl);
+                                    stories = await res.json();
+                                } catch (err) {}
+                            }
+                        }
+
+                        for (const story of stories) {
+                            const contentPath = `/api/content?url=${encodeURIComponent(story.url)}`;
+                            const cachedReq = keys.find(r => {
+                                const u = new URL(r.url);
+                                return (u.pathname + u.search) === contentPath;
+                            });
+                            if (cachedReq) {
+                                try {
+                                    const cachedRes = await cache.match(cachedReq);
+                                    const data = cachedRes && await cachedRes.json();
+                                    if (data && data.slides) {
+                                        for (const slide of data.slides) {
+                                            if (slide.image) {
+                                                const imgReq = keys.find(r => r.url === slide.image);
+                                                if (imgReq) await cache.delete(imgReq);
+                                            }
+                                        }
+                                    }
+                                } catch (err) {}
+                                await cache.delete(cachedReq);
+                            }
+                        }
+
+                        // Delete the cached story list entry
+                        const listPath = `/api/stories?volume=${volKey}`;
+                        keys = await cache.keys(); // refresh after deletions
+                        const listReq = keys.find(r => {
+                            const u = new URL(r.url);
+                            return (u.pathname + u.search) === listPath;
+                        });
+                        if (listReq) await cache.delete(listReq);
+
+                        await checkCachedStories();
+                        await updateBookCachedStatuses();
+                    } catch (e) {
+                        console.error('Error clearing book cache:', e);
+                    }
+                };
+
+                const getAllCachedStories = () => {
+                    const list = [];
+                    cachedUrls.value.forEach(url => {
+                        list.push({
+                            url,
+                            title: storyTitles.value[url] || url.split('/').pop().replace(/-/g, ' ').replace(/\?.*$/, '')
+                        });
+                    });
+                    return list.sort((a, b) => a.title.localeCompare(b.title));
+                };
+
+                const prefetchBook = async (volKey) => {
+                    prefetching.value = true;
+                    prefetchBookName.value = volumes[volKey];
+                    prefetchProgress.value = 0;
+                    prefetchStatus.value = "Connecting to backend...";
+                    prefetchController = new AbortController();
+
+                    try {
+                        const listUrl = `${API_BASE}/api/stories?volume=${volKey}`;
+                        const listRes = await fetch(listUrl, { signal: prefetchController.signal });
+                        const stories = await listRes.json();
+                        
+                        if (!stories || stories.length === 0) {
+                            throw new Error("No stories found");
+                        }
+
+                        for (const story of stories) {
+                            storyTitles.value[story.url] = story.title;
+                        }
+
+                        let completed = 0;
+                        const total = stories.length;
+
+                        await Promise.all(stories.map(async (story) => {
+                            try {
+                                const contentUrl = `${API_BASE}/api/content?url=${encodeURIComponent(story.url)}`;
+                                const contentRes = await fetch(contentUrl, { signal: prefetchController.signal });
+                                const content = await contentRes.json();
+                                
+                                if (content && content.slides) {
+                                    const imagePromises = content.slides
+                                        .filter(slide => slide.image)
+                                        .map(slide => {
+                                            return fetch(slide.image, { signal: prefetchController.signal })
+                                                .catch(err => console.warn('Pre-fetch image failed:', slide.image, err));
+                                        });
+                                    await Promise.all(imagePromises);
+                                }
+                            } catch (err) {
+                                console.error('Failed to pre-fetch story:', story.title, err);
+                            } finally {
+                                completed++;
+                                prefetchProgress.value = Math.round((completed / total) * 100);
+                                prefetchStatus.value = `Downloaded ${completed} of ${total} stories...`;
+                            }
+                        }));
+
+                        prefetchStatus.value = "Download completed successfully!";
+                        setTimeout(() => {
+                            prefetching.value = false;
+                        }, 1200);
+
+                        await checkCachedStories();
+                        await updateBookCachedStatuses();
+                    } catch (e) {
+                        if (e.name === 'AbortError') {
+                            prefetchStatus.value = "Download canceled.";
+                        } else {
+                            prefetchStatus.value = "Download failed.";
+                            console.error(e);
+                        }
+                        setTimeout(() => {
+                            prefetching.value = false;
+                        }, 2000);
+                    }
+                };
+
+                const cancelPrefetch = () => {
+                    if (prefetchController) {
+                        prefetchController.abort();
+                    }
+                };
+
+                onMounted(async () => {
                     const saved = localStorage.getItem('scripture-story-settings');
                     if (saved) settings.value = JSON.parse(saved);
                     window.addEventListener("keydown", handleKey);
+
+                    if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.register('./sw.js')
+                            .then(reg => console.log('Service Worker registered with scope:', reg.scope))
+                            .catch(err => console.error('Service Worker registration failed:', err));
+                    }
+
+                    // Load cache state on startup
+                    await populateStoryTitles();
+                    await checkCachedStories();
+                    await updateBookCachedStatuses();
                 });
 
                 watch(settings, (val) => {
@@ -369,6 +819,14 @@
                     try {
                         const res = await fetch(`${API_BASE}/api/stories?volume=${volKey}`);
                         storyList.value = await res.json();
+
+                        if (storyList.value && storyList.value.length > 0) {
+                            for (const story of storyList.value) {
+                                storyTitles.value[story.url] = story.title;
+                            }
+                        }
+                        await checkCachedStories();
+                        await updateBookCachedStatuses();
                     } catch (e) { console.error("Volume Load Error"); }
                     finally { loadingStories.value = false; }
                 };
@@ -382,10 +840,6 @@
                     loadStory();
                 };
 
-                // Native Browser Caching Strategy:
-                // We create a new Image() object for every slide and set the .src.
-                // The browser starts downloading it. Because it's a standard Image tag,
-                // it doesn't trigger CORS blocks, but it DOES populate the cache.
                 const preloadImagesNative = (slidesList) => {
                     return Promise.all(slidesList.filter(s => !s.is_intro).map(slide => {
                         return new Promise((resolve) => {
@@ -411,8 +865,11 @@
                         slides.value = newList;
 
                         statusMessage.value = "Loading images...";
-                        // Wait for images to download into browser cache
                         await preloadImagesNative(newList);
+                        
+                        // Story successfully visited and loaded: update cache status
+                        await checkCachedStories();
+                        await updateBookCachedStatuses();
                     } catch (e) {
                         statusMessage.value = "Load Error";
                     }
@@ -467,7 +924,12 @@
                     statusMessage, sourceUrl, storySubtitle, storyHeaderRef, currentYear,
                     settings, showSettings,
                     loadStory, nextSlide, prevSlide, toggleCaption,
-                    handleTouchStart, handleTouchEnd, selectStory, handleWheel, selectVolume
+                    handleTouchStart, handleTouchEnd, selectStory, handleWheel, selectVolume,
+
+                    // Caching & Pre-fetching
+                    cachedUrls, bookStatuses, prefetching, prefetchBookName, prefetchProgress,
+                    prefetchStatus, storyTitles, prefetchBook, cancelPrefetch,
+                    clearStoryCache, clearBookCache, getAllCachedStories
                 };
             }
         }).mount('#app');
