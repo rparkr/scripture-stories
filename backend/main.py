@@ -44,7 +44,6 @@ app = FastAPI()
 # Configure CORS for GitHub Pages and local development
 allowed_origins = [
     "https://rparkr.github.io",  # GitHub Pages domain
-    "https://rparkr.github.io/scripture-stories",  # GitHub Pages repo
     "http://localhost:3000",  # Local frontend development
     "http://localhost:8000",  # Local testing
     "http://127.0.0.1:3000",
@@ -61,38 +60,6 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=True,
 )
-
-
-@app.middleware("http")
-async def restrict_to_github_pages(request: Request, call_next):
-    # 1. Allow local readiness checks and preflight requests
-    if request.method == "OPTIONS" or request.url.path == "/":
-        return await call_next(request)
-
-    origin = request.headers.get("origin")
-    referer = request.headers.get("referer")
-    allowed_origin = allowed_origins[0]
-
-    # 2. Allow local CLI debugging (optional, but helpful for curl http://localhost:8000)
-    host = request.headers.get("host", "")
-    if "localhost" in host or "127.0.0.1" in host:
-        return await call_next(request)
-
-    # 3. Enforce strict origin validation for external production traffic
-    if origin and origin != allowed_origin:
-        return JSONResponse(
-            status_code=403,
-            content={"detail": "Forbidden: Request origin unauthorized."},
-        )
-
-    if referer and not referer.startswith(allowed_origin):
-        return JSONResponse(
-            status_code=403,
-            content={"detail": "Forbidden: Request referrer unauthorized."},
-        )
-
-    return await call_next(request)
-
 
 @app.get("/")
 async def serve_index():
