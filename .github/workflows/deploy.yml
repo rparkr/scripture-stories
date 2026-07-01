@@ -53,9 +53,12 @@ jobs:
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v7
         with:
-          context: ./backend
+          context: './backend'
           platforms: linux/arm64
           push: true
+          # Disable SBOM and provenance generation to avoid compatibility errors with Amazon ECR.
+          provenance: false
+          sbom: false
           tags: |
             ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
             ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
@@ -94,7 +97,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: "frontend"
+          path: './frontend'
 
       - name: Deploy to GitHub Pages
         id: deployment
