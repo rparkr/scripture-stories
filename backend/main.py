@@ -32,7 +32,7 @@ class Volume(StrEnum):
 # Mapping of volumes to their URL paths
 VOLUMES = {
     Volume.OLD_TESTAMENT: "/study/manual/old-testament-stories-2022",
-    Volume.NEW_TESTAMENT: "/study/manual/new-testament-stories-2026",
+    Volume.NEW_TESTAMENT: "/study/manual/new-testament-scripture-stories",
     Volume.BOOK_OF_MORMON: "/study/manual/book-of-mormon-stories-2024",
     Volume.DOCTRINE_AND_COVENANTS: "/study/manual/doctrine-and-covenants-stories-2025",
 }
