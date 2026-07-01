@@ -1,4 +1,5 @@
 # /// script
+# requires-python = ">=3.12"
 # dependencies = [
 #   "beautifulsoup4",
 #   "fastapi",
@@ -256,6 +257,7 @@ def main():
     local_ip = LocalIP()
     print(
         f"\n📖 Scripture Stories app is now running\n👉 Go to: http://{local_ip}:8000\n"
+        "or go to http://localhost:8000 if running locally.\n"
     )
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
