@@ -10,3 +10,5 @@
 # Ruff linting and formatting
 **/.ruff_cache/
 
+# Agent skills not specific to this repository
+.agents/skills/openspec-*
