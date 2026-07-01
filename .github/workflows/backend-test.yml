@@ -44,5 +44,5 @@ jobs:
 
       - name: Format check
         working-directory: ./backend
-        run: uv format --check main.py
+        run: uv run ruff format --check main.py
         continue-on-error: true
