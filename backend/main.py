@@ -253,7 +253,9 @@ async def get_story_content(url: str):
 def main():
     import uvicorn
 
-    app.mount("/", StaticFiles(directory="../docs"), name="static")
+    # Serve the frontend static files and enable SPA fallback for unknown
+    # non-API paths by using `html=True` so index.html is returned.
+    app.mount("/", StaticFiles(directory="../docs", html=True), name="static")
     local_ip = LocalIP()
     print(
         f"\n📖 Scripture Stories app is now running\n👉 Go to: http://{local_ip}:8000\n"

@@ -455,6 +455,7 @@
                 const storyHeaderRef = ref("");
                 const slides = ref([]);
                 const currentSlideIndex = ref(0);
+                const currentStorySlug = ref("");
 
                 const loading = ref(false);
                 const loadingStories = ref(false);
@@ -476,6 +477,94 @@
                 const prefetchStatus = ref('');
                 const storyTitles = ref({});
                 let prefetchController = null;
+
+                const slugifyTitle = (title) => {
+                    return (title || "")
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, "-")
+                        .replace(/^-+|-+$/g, "");
+                };
+
+                const buildRoutePath = (volumeKey, storySlug = null, slideNumber = null) => {
+                    const pathParts = [volumeKey];
+                    if (storySlug) pathParts.push(storySlug);
+                    if (slideNumber && slideNumber > 0) pathParts.push(String(slideNumber));
+                    return `/${pathParts.join('/')}`;
+                };
+
+                const syncRouteToBrowser = (push = false) => {
+                    if (!selectedVolume.value) {
+                        if (window.location.pathname !== '/') {
+                            const method = push ? 'pushState' : 'replaceState';
+                            window.history[method]({}, '', '/');
+                        }
+                        return;
+                    }
+
+                    const routePath = buildRoutePath(
+                        selectedVolume.value,
+                        currentStorySlug.value || null,
+                        selectedUrl.value && currentStorySlug.value && slides.value.length > 0 && currentSlideIndex.value > 0
+                            ? currentSlideIndex.value
+                            : null
+                    );
+
+                    const method = push ? 'pushState' : 'replaceState';
+                    if (window.location.pathname !== routePath) {
+                        window.history[method]({}, '', routePath);
+                    }
+                };
+
+                const applyRouteToApp = async (path, { replace = false } = {}) => {
+                    const cleanPath = (path || '/').replace(/^\/+|\/+$/g, '');
+                    const segments = cleanPath.split('/').filter(Boolean);
+                    if (!segments.length) {
+                        selectedVolume.value = null;
+                        selectedUrl.value = '';
+                        currentStoryTitle.value = '';
+                        storySubtitle.value = '';
+                        storyHeaderRef.value = '';
+                        slides.value = [];
+                        currentSlideIndex.value = 0;
+                        currentStorySlug.value = '';
+                        return;
+                    }
+
+                    const volumeKey = segments[0];
+                    if (!Object.prototype.hasOwnProperty.call(volumes, volumeKey)) {
+                        return;
+                    }
+
+                    selectedVolume.value = volumeKey;
+                    if (segments.length === 1) {
+                        showMenu.value = true;
+                        await selectVolume(volumeKey, { updateHistory: false, clearSelection: true });
+                        return;
+                    }
+
+                    try {
+                        loadingStories.value = true;
+                        const res = await fetch(`${API_BASE}/api/stories?volume=${volumeKey}`);
+                        const stories = await res.json();
+                        storyList.value = stories;
+                        const storySlug = segments[1];
+                        const matchingStory = stories.find((story) => slugifyTitle(story.title) === storySlug);
+                        if (!matchingStory) {
+                            return;
+                        }
+
+                        const requestedSlide = segments[2] ? parseInt(segments[2], 10) : null;
+                        selectStory(matchingStory, {
+                            updateHistory: false,
+                            requestedSlide,
+                            replace,
+                        });
+                    } catch (e) {
+                        console.error('Route load error', e);
+                    } finally {
+                        loadingStories.value = false;
+                    }
+                };
 
                 /**
                  * Returns all cache keys from the SW cache as an array of Request objects.
@@ -807,18 +896,34 @@
                     await populateStoryTitles();
                     await checkCachedStories();
                     await updateBookCachedStatuses();
+                    const initialRoute = new URLSearchParams(window.location.search).get('route') || window.location.pathname;
+                    await applyRouteToApp(initialRoute, { replace: true });
+
+                    window.addEventListener('popstate', () => {
+                        applyRouteToApp(window.location.pathname, { replace: false });
+                    });
                 });
 
                 watch(settings, (val) => {
                     localStorage.setItem('scripture-story-settings', JSON.stringify(val));
                 }, { deep: true });
 
-                const selectVolume = async (volKey) => {
+                const selectVolume = async (volKey, options = {}) => {
                     selectedVolume.value = volKey;
                     loadingStories.value = true;
                     try {
                         const res = await fetch(`${API_BASE}/api/stories?volume=${volKey}`);
                         storyList.value = await res.json();
+
+                        if (options.clearSelection !== false) {
+                            selectedUrl.value = '';
+                            currentStoryTitle.value = '';
+                            storySubtitle.value = '';
+                            storyHeaderRef.value = '';
+                            slides.value = [];
+                            currentSlideIndex.value = 0;
+                            currentStorySlug.value = '';
+                        }
 
                         if (storyList.value && storyList.value.length > 0) {
                             for (const story of storyList.value) {
@@ -829,15 +934,20 @@
                         await updateBookCachedStatuses();
                     } catch (e) { console.error("Volume Load Error"); }
                     finally { loadingStories.value = false; }
+
+                    if (options.updateHistory !== false) {
+                        syncRouteToBrowser(true);
+                    }
                 };
 
-                const selectStory = (story) => {
+                const selectStory = (story, options = {}) => {
                     selectedUrl.value = story.url;
                     currentStoryTitle.value = story.title;
                     storySubtitle.value = story.subtitle;
                     storyHeaderRef.value = story.scripture_ref;
+                    currentStorySlug.value = slugifyTitle(story.title);
                     showMenu.value = false;
-                    loadStory();
+                    loadStory(story, options.requestedSlide || null, options);
                 };
 
                 const preloadImagesNative = (slidesList) => {
@@ -851,22 +961,33 @@
                     }));
                 };
 
-                const loadStory = async () => {
+                const loadStory = async (storyOverride = null, requestedSlide = null, options = {}) => {
                     loading.value = true;
                     statusMessage.value = "Preparing Story...";
                     slides.value = [];
                     currentSlideIndex.value = 0;
                     showCaption.value = true;
                     try {
-                        const res = await fetch(`${API_BASE}/api/content?url=${encodeURIComponent(selectedUrl.value)}`);
+                        const story = storyOverride || { url: selectedUrl.value, title: currentStoryTitle.value, subtitle: storySubtitle.value, scripture_ref: storyHeaderRef.value };
+                        const storyUrl = story.url || selectedUrl.value;
+                        const res = await fetch(`${API_BASE}/api/content?url=${encodeURIComponent(storyUrl)}`);
                         const data = await res.json();
                         sourceUrl.value = data.source_url;
                         const newList = [{ is_intro: true }, ...data.slides];
                         slides.value = newList;
+                        const requestedIndex = requestedSlide && requestedSlide > 0 ? Math.min(requestedSlide, newList.length - 1) : 0;
+                        currentSlideIndex.value = requestedIndex;
 
                         statusMessage.value = "Loading images...";
                         await preloadImagesNative(newList);
-                        
+
+                        if (story.title) {
+                            currentStoryTitle.value = story.title;
+                            storySubtitle.value = story.subtitle || storySubtitle.value;
+                            storyHeaderRef.value = story.scripture_ref || storyHeaderRef.value;
+                            currentStorySlug.value = slugifyTitle(story.title);
+                        }
+
                         // Story successfully visited and loaded: update cache status
                         await checkCachedStories();
                         await updateBookCachedStatuses();
@@ -874,6 +995,10 @@
                         statusMessage.value = "Load Error";
                     }
                     finally { loading.value = false; }
+
+                    if (options.updateHistory !== false) {
+                        syncRouteToBrowser(options.replace ? false : true);
+                    }
                 };
 
                 const currentSlide = computed(() => slides.value[currentSlideIndex.value] || {});
@@ -916,12 +1041,17 @@
                     if (e.key === "ArrowLeft") prevSlide();
                 };
 
+                watch(currentSlideIndex, () => {
+                    if (!selectedVolume.value || !currentStorySlug.value) return;
+                    syncRouteToBrowser(false);
+                });
+
                 onUnmounted(() => window.removeEventListener("keydown", handleKey));
 
                 return {
                     volumes, selectedVolume, storyList, selectedUrl, slides, currentSlideIndex,
                     loading, loadingStories, showCaption, currentSlide, showMenu, currentStoryTitle,
-                    statusMessage, sourceUrl, storySubtitle, storyHeaderRef, currentYear,
+                    statusMessage, sourceUrl, storySubtitle, storyHeaderRef, currentYear, currentStorySlug,
                     settings, showSettings,
                     loadStory, nextSlide, prevSlide, toggleCaption,
                     handleTouchStart, handleTouchEnd, selectStory, handleWheel, selectVolume,

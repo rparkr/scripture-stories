@@ -44,12 +44,13 @@ self.addEventListener('fetch', (event) => {
 
     const isSameOrigin = url.origin === self.location.origin;
     const isAPI = url.pathname.startsWith('/api/');
+    const isAppRoute = url.pathname !== '/' && !url.pathname.startsWith('/api/') && !url.pathname.startsWith('/images/') && !url.pathname.includes('.') && !url.pathname.startsWith('/sw.js');
     // Match common image formats or paths pointing to the scripture images CDN
     const isImage = url.hostname.includes('churchofjesuschrist.org') || 
                     url.pathname.match(/\.(webp|png|jpg|jpeg|gif|svg)$/i);
     const isCDN = url.hostname.includes('unpkg.com') || url.hostname.includes('cdn.tailwindcss.com');
 
-    if (isSameOrigin || isAPI || isImage || isCDN) {
+    if (isSameOrigin || isAPI || isImage || isCDN || isAppRoute) {
         event.respondWith(
             caches.open(CACHE_NAME).then(async (cache) => {
                 const cachedResponse = await cache.match(event.request);
@@ -70,7 +71,12 @@ self.addEventListener('fetch', (event) => {
                         });
                     }
 
-                    const response = await fetch(fetchRequest);
+                    let response;
+                    if (isAppRoute && isSameOrigin) {
+                        response = await fetch('./index.html');
+                    } else {
+                        response = await fetch(fetchRequest);
+                    }
 
                     // Cache the response if it is valid (status 200) or an opaque response (status 0)
                     if (response && (response.status === 200 || response.status === 0)) {
